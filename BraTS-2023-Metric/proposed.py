@@ -1,7 +1,8 @@
 import cc3d
 import numpy as np
 import pandas as pd
-from miccai_dice import dice
+# from miccai_dice import dice
+from soumya import dice
 
 def find_overlapping_components(prediction_cc, gt_cc):
     overlapping_components = {}
@@ -18,6 +19,27 @@ def find_overlapping_components(prediction_cc, gt_cc):
                 if prediction_component not in overlapping_components:
                     overlapping_components[prediction_component] = set()
                 overlapping_components[prediction_component].add(gt_component)
+    
+    # Filter out prediction components overlapping with only one ground truth component
+    overlapping_components = {k: v for k, v in overlapping_components.items() if len(v) > 1}
+
+    return overlapping_components
+
+def find_overlapping_components_inverse(prediction_cc, gt_cc):
+    overlapping_components = {}
+    
+    # Iterate through each pixel in the prediction connected component array
+    for i in range(prediction_cc.shape[0]):
+        for j in range(prediction_cc.shape[1]):
+            prediction_component = prediction_cc[i, j]
+            gt_component = gt_cc[i, j]
+            
+            # Check if the prediction component overlaps with any ground truth component
+            if prediction_component != 0 and gt_component != 0:
+                # Store the overlapping components in a dictionary
+                if gt_component not in overlapping_components:
+                    overlapping_components[gt_component] = set()
+                overlapping_components[gt_component].add(prediction_component)
     
     # Filter out prediction components overlapping with only one ground truth component
     overlapping_components = {k: v for k, v in overlapping_components.items() if len(v) > 1}
@@ -77,6 +99,25 @@ def collect_overlap_metrics(pred_label_cc, gt_label_cc, overlapping_components):
 
     return overlap_metrics
 
+def collect_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components):
+    
+        overlap_metrics = []
+    
+        for gt_components, pred_components in overlapping_components.items():
+            predcomps = list(pred_components)
+    
+            pred_label_cc_tmp = pred_label_cc.copy()
+            gt_label_cc_tmp = gt_label_cc.copy()
+    
+            gt_cc_tmp = (gt_label_cc_tmp == gt_components).astype(int)
+            pred_cc_tmp = np.array([[1 if (x > 0 and x in predcomps) else 0 for x in sublist] for sublist in pred_label_cc_tmp])    
+    
+            overlap_metrics.append({'GT'  : gt_components,
+                                    'Pred': predcomps,
+                                    'Dice': dice(pred_cc_tmp, gt_cc_tmp)})
+    
+        return overlap_metrics
+
 def collect_metrics(pred_label_cc, gt_label_cc, overlapping_components):
 
     legacy_metrics, fp = collect_legacy_metrics(pred_label_cc, gt_label_cc)
@@ -103,6 +144,32 @@ def collect_metrics(pred_label_cc, gt_label_cc, overlapping_components):
     
     return final_metrics_df, fp
 
+def collect_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components):
+    
+        legacy_metrics, fp = collect_legacy_metrics(pred_label_cc, gt_label_cc)
+        legacy_metrics = pd.DataFrame(legacy_metrics)
+        overlap_metrics = collect_overlap_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components)
+        overlap_metrics = pd.DataFrame(overlap_metrics)
+    
+        final_metrics_df = pd.concat([legacy_metrics, overlap_metrics], ignore_index=True)
+    
+        pred_list = []
+        pred_int = []
+    
+        for index, row in final_metrics_df.iterrows():
+            if isinstance(row['Pred'], list):
+                pred_list.append(row['GT'])
+            if isinstance(row['Pred'], int):
+                pred_int.append(row['GT'])
+    
+        common_elements = set(pred_list).intersection(set(pred_int))
+    
+        for index, row in final_metrics_df.iterrows():
+            if row['GT'] in common_elements and isinstance(row['Pred'], int):
+                final_metrics_df.drop(index, inplace=True)
+        
+        return final_metrics_df, fp
+
 def lesion_wise_metric(df, fp):
 
     dice_scores = df['Dice'].to_list()
@@ -111,16 +178,20 @@ def lesion_wise_metric(df, fp):
 
     return lesion_wise_dice
 
-def proposed_metric(pred, gt):
+def metric(pred, gt):
 
     gt_label_cc = cc3d.connected_components(gt)
     pred_label_cc = cc3d.connected_components(pred)
 
     overlapping_components = find_overlapping_components(pred_label_cc, gt_label_cc)
+    overlapping_components_inverse = find_overlapping_components_inverse(pred_label_cc, gt_label_cc)
 
     metrics, fp = collect_metrics(pred_label_cc, gt_label_cc, overlapping_components)
+    metrics_inverse, fp_inverse = collect_metrics_inverse(pred_label_cc, gt_label_cc, overlapping_components_inverse)
 
-    return lesion_wise_metric(metrics, fp)
+    highest_dice = np.max(metrics['Dice'].tolist() + metrics_inverse['Dice'].tolist())
+
+    return highest_dice
 
 #Psuedo Algorithm
 #1. Compute connected components for prediction and ground truth
