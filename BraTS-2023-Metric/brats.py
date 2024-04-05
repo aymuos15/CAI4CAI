@@ -1,11 +1,17 @@
+"""
+COMMENTED OUT VERSION OF THE ORIGINAL REPO - https://github.com/rachitsaluja/BraTS-2023-Metrics/blob/main/metrics.py
+
+ONLY PRINTS THE ACTUAL (LESION-WISE BRATS) DICE SCORE
+"""
+
 import numpy as np
-import nibabel as nib
+# import nibabel as nib
 import cc3d
 import scipy
-import os
+# import os
 import pandas as pd
-import surface_distance
-import sys
+# import surface_distance
+# import sys
 import math
 
 def dice(im1, im2):
@@ -33,46 +39,46 @@ def dice(im1, im2):
 
     return 2. * (intersection.sum()) / (im1.sum() + im2.sum())
 
-def get_TissueWiseSeg(prediction_matrix, gt_matrix, tissue_type):
-    """
-    Converts the segmentatations to isolate tissue types
+# def get_TissueWiseSeg(prediction_matrix, gt_matrix, tissue_type):
+#     """
+#     Converts the segmentatations to isolate tissue types
 
-    Parameters
-    ==========
-    prediction_matrix: Numpy Array/Matrix; Predicted segmentation in matrix form 
-    gt_matrix: Numpy Array/Matrix; Ground truth segmentation in matrix form
-    tissue_type: str; Can be WT, ET or TC
+#     Parameters
+#     ==========
+#     prediction_matrix: Numpy Array/Matrix; Predicted segmentation in matrix form 
+#     gt_matrix: Numpy Array/Matrix; Ground truth segmentation in matrix form
+#     tissue_type: str; Can be WT, ET or TC
 
-    Output
-    ======
-    prediction_matrix: Numpy Array/Matrix; Predicted segmentation in matrix form with 
-                       just tissue type mentioned
-    gt_matrix: Numpy Array/Matrix; Ground truth segmentation in matrix form with just 
-                       tissue type mentioned
-    """
+#     Output
+#     ======
+#     prediction_matrix: Numpy Array/Matrix; Predicted segmentation in matrix form with 
+#                        just tissue type mentioned
+#     gt_matrix: Numpy Array/Matrix; Ground truth segmentation in matrix form with just 
+#                        tissue type mentioned
+#     """
 
-    if tissue_type == 'WT':
-        np.place(prediction_matrix, (prediction_matrix != 1) & (prediction_matrix != 2) & (prediction_matrix != 3), 0)
-        np.place(prediction_matrix, (prediction_matrix > 0), 1)
+#     if tissue_type == 'WT':
+#         np.place(prediction_matrix, (prediction_matrix != 1) & (prediction_matrix != 2) & (prediction_matrix != 3), 0)
+#         np.place(prediction_matrix, (prediction_matrix > 0), 1)
         
-        np.place(gt_matrix, (gt_matrix != 1) & (gt_matrix != 2) & (gt_matrix != 3), 0)
-        np.place(gt_matrix, (gt_matrix > 0), 1)
+#         np.place(gt_matrix, (gt_matrix != 1) & (gt_matrix != 2) & (gt_matrix != 3), 0)
+#         np.place(gt_matrix, (gt_matrix > 0), 1)
     
-    elif tissue_type == 'TC':
-        np.place(prediction_matrix, (prediction_matrix != 1)  & (prediction_matrix != 3), 0)
-        np.place(prediction_matrix, (prediction_matrix > 0), 1)
+#     elif tissue_type == 'TC':
+#         np.place(prediction_matrix, (prediction_matrix != 1)  & (prediction_matrix != 3), 0)
+#         np.place(prediction_matrix, (prediction_matrix > 0), 1)
         
-        np.place(gt_matrix, (gt_matrix != 1) & (gt_matrix != 3), 0)
-        np.place(gt_matrix, (gt_matrix > 0), 1)
+#         np.place(gt_matrix, (gt_matrix != 1) & (gt_matrix != 3), 0)
+#         np.place(gt_matrix, (gt_matrix > 0), 1)
         
-    elif tissue_type == 'ET':
-        np.place(prediction_matrix, (prediction_matrix != 3), 0)
-        np.place(prediction_matrix, (prediction_matrix > 0), 1)
+#     elif tissue_type == 'ET':
+#         np.place(prediction_matrix, (prediction_matrix != 3), 0)
+#         np.place(prediction_matrix, (prediction_matrix > 0), 1)
         
-        np.place(gt_matrix, (gt_matrix != 3), 0)
-        np.place(gt_matrix, (gt_matrix > 0), 1)
+#         np.place(gt_matrix, (gt_matrix != 3), 0)
+#         np.place(gt_matrix, (gt_matrix > 0), 1)
     
-    return prediction_matrix, gt_matrix
+#     return prediction_matrix, gt_matrix
 
 
 def get_GTseg_combinedByDilation(gt_dilated_cc_mat, gt_label_cc):
@@ -135,23 +141,25 @@ def get_LesionWiseScores(prediction_seg, gt_seg, label_value, dil_factor):
     """
 
     ## Get Prediction and GT segs matrix files
-    pred_nii = nib.load(prediction_seg)
-    gt_nii = nib.load(gt_seg)
-    pred_mat = pred_nii.get_fdata()
-    gt_mat = gt_nii.get_fdata()
+    # pred_nii = nib.load(prediction_seg)
+    # gt_nii = nib.load(gt_seg)
+    # pred_mat = pred_nii.get_fdata()
+    # gt_mat = gt_nii.get_fdata()
+    pred_mat = prediction_seg
+    gt_mat = gt_seg
 
     ## Get Spacing to computes volumes
     ## Brats Assumes all spacing is 1x1x1mm3
-    sx, sy, sz = pred_nii.header.get_zooms()
+    # sx, sy, sz = pred_nii.header.get_zooms()
 
     ## Get the prediction and GT matrix based on 
     ## WT, TC, ET
 
-    pred_mat, gt_mat = get_TissueWiseSeg(
-                                prediction_matrix = pred_mat,
-                                gt_matrix = gt_mat,
-                                tissue_type = label_value
-                            )
+    # pred_mat, gt_mat = get_TissueWiseSeg(
+    #                             prediction_matrix = pred_mat,
+    #                             gt_matrix = gt_mat,
+    #                             tissue_type = label_value
+    #                         )
     
     ## Get Dice score for the full image
     if np.all(gt_mat==0) and np.all(pred_mat==0):
@@ -164,25 +172,25 @@ def get_LesionWiseScores(prediction_seg, gt_seg, label_value, dil_factor):
     
     ## Get HD95 sccre for the full image
     
-    if np.all(gt_mat==0) and np.all(pred_mat==0):
-        full_hd95 = 0.0
-    else:
-        full_sd = surface_distance.compute_surface_distances(gt_mat.astype(int), 
-                                                             pred_mat.astype(int), 
-                                                             (sx,sy,sz))
-        full_hd95 = surface_distance.compute_robust_hausdorff(full_sd, 95)
+    # if np.all(gt_mat==0) and np.all(pred_mat==0):
+    #     full_hd95 = 0.0
+    # else:
+    #     full_sd = surface_distance.compute_surface_distances(gt_mat.astype(int), 
+    #                                                          pred_mat.astype(int), 
+    #                                                          (sx,sy,sz))
+    #     full_hd95 = surface_distance.compute_robust_hausdorff(full_sd, 95)
 
     ## Get Sensitivity and Specificity
-    full_sens, full_specs = get_sensitivity_and_specificity(result_array = pred_mat, 
-                                                            target_array = gt_mat)
+    # full_sens, full_specs = get_sensitivity_and_specificity(result_array = pred_mat, 
+    #                                                         target_array = gt_mat)
     
     ## Get GT Volume and Pred Volume for the full image
-    full_gt_vol = np.sum(gt_mat)*sx*sy*sz
-    full_pred_vol = np.sum(pred_mat)*sx*sy*sz
+    # full_gt_vol = np.sum(gt_mat)*sx*sy*sz
+    # full_pred_vol = np.sum(pred_mat)*sx*sy*sz
 
     ## Performing Dilation and CC analysis
 
-    dilation_struct = scipy.ndimage.generate_binary_structure(3, 2)
+    dilation_struct = scipy.ndimage.generate_binary_structure(2, 2)
 
     gt_mat_cc = cc3d.connected_components(gt_mat, connectivity=26)
     pred_mat_cc = cc3d.connected_components(pred_mat, connectivity=26)
@@ -217,7 +225,7 @@ def get_LesionWiseScores(prediction_seg, gt_seg, label_value, dil_factor):
         gt_tmp_dilation = scipy.ndimage.binary_dilation(gt_tmp, structure = dilation_struct, iterations = dil_factor)
 
         # Volume of lesion
-        gt_vol = np.sum(gt_tmp)*sx*sy*sz 
+        # gt_vol = np.sum(gt_tmp)*sx*sy*sz 
         
         ## Extracting Predicted true positive lesions
         pred_tmp = np.copy(pred_label_cc)
@@ -235,11 +243,11 @@ def get_LesionWiseScores(prediction_seg, gt_seg, label_value, dil_factor):
 
         ## Calculating Lesion-wise Dice and HD95
         dice_score = dice(pred_tmp, gt_tmp)
-        surface_distances = surface_distance.compute_surface_distances(gt_tmp, pred_tmp, (sx,sy,sz))
-        hd = surface_distance.compute_robust_hausdorff(surface_distances, 95)
+        # surface_distances = surface_distance.compute_surface_distances(gt_tmp, pred_tmp, (sx,sy,sz))
+        # hd = surface_distance.compute_robust_hausdorff(surface_distances, 95)
 
         metric_pairs.append((intersecting_cc, 
-                            gtcomp, gt_vol, dice_score, hd))
+                            gtcomp, 0, dice_score, 0))
         
         ## Extracting Number of TP/FP/FN and other data
         if len(intersecting_cc) > 0:
@@ -251,37 +259,38 @@ def get_LesionWiseScores(prediction_seg, gt_seg, label_value, dil_factor):
             pred_label_cc[np.isin(
                 pred_label_cc,tp+[0],invert=True)])
     
-    return tp, fn, fp, gt_tp, metric_pairs, full_dice, full_hd95, full_gt_vol, full_pred_vol, full_sens, full_specs
+    # return tp, fn, fp, gt_tp, metric_pairs, full_dice, full_hd95, full_gt_vol, full_pred_vol, full_sens, full_specs
+    return tp, fn, fp, gt_tp, metric_pairs, full_dice, 0, 0, 0, 0, 0
 
 
-def get_sensitivity_and_specificity(result_array, target_array):
-    """
-    This function is extracted from GaNDLF from mlcommons
+# def get_sensitivity_and_specificity(result_array, target_array):
+#     """
+#     This function is extracted from GaNDLF from mlcommons
 
-    You can find the documentation here - 
+#     You can find the documentation here - 
 
-    https://github.com/mlcommons/GaNDLF/blob/master/GANDLF/metrics/segmentation.py#L196
+#     https://github.com/mlcommons/GaNDLF/blob/master/GANDLF/metrics/segmentation.py#L196
 
-    """
-    iC = np.sum(result_array)
-    rC = np.sum(target_array)
+#     """
+#     iC = np.sum(result_array)
+#     rC = np.sum(target_array)
 
-    overlap = np.where((result_array == target_array), 1, 0)
+#     overlap = np.where((result_array == target_array), 1, 0)
 
-    # Where they agree are both equal to that value
-    TP = overlap[result_array == 1].sum()
-    FP = iC - TP
-    FN = rC - TP
-    TN = np.count_nonzero((result_array != 1) & (target_array != 1))
+#     # Where they agree are both equal to that value
+#     TP = overlap[result_array == 1].sum()
+#     FP = iC - TP
+#     FN = rC - TP
+#     TN = np.count_nonzero((result_array != 1) & (target_array != 1))
 
-    Sens = 1.0 * TP / (TP + FN + sys.float_info.min)
-    Spec = 1.0 * TN / (TN + FP + sys.float_info.min)
+#     Sens = 1.0 * TP / (TP + FN + sys.float_info.min)
+#     Spec = 1.0 * TN / (TN + FP + sys.float_info.min)
 
-    # Make Changes if both input and reference are 0 for the tissue type
-    if (iC == 0) and (rC == 0):
-        Sens = 1.0
+#     # Make Changes if both input and reference are 0 for the tissue type
+#     if (iC == 0) and (rC == 0):
+#         Sens = 1.0
 
-    return Sens, Spec
+#     return Sens, Spec
 
 
 
@@ -306,24 +315,24 @@ def get_LesionWiseResults(pred_file, gt_file, challenge_name, output=None):
     ## Dilation and Threshold Parameters
     if challenge_name == 'BraTS-GLI':
         dilation_factor = 3
-        lesion_volume_thresh = 50
+        # lesion_volume_thresh = 50
     elif challenge_name == 'BraTS-SSA':
         dilation_factor = 3
-        lesion_volume_thresh = 50
+        # lesion_volume_thresh = 50
     elif challenge_name == 'BraTS-MEN':
         dilation_factor = 1
-        lesion_volume_thresh = 50
+        # lesion_volume_thresh = 50
     elif challenge_name == 'BraTS-PED':
         dilation_factor = 3
-        lesion_volume_thresh = 50
+        # lesion_volume_thresh = 50
     elif challenge_name == 'BraTS-MET':
         dilation_factor = 1
-        lesion_volume_thresh = 2       
+        # lesion_volume_thresh = 2       
         
 
     final_lesionwise_metrics_df = pd.DataFrame()
-    final_metrics_dict = dict()
-    label_values = ['WT', 'TC', 'ET']
+    # final_metrics_dict = dict()
+    label_values = ['WT']
 
     for l in range(len(label_values)):
         tp, fn, fp, gt_tp, metric_pairs, full_dice, full_hd95, full_gt_vol, full_pred_vol, full_sens, full_specs = get_LesionWiseScores(
@@ -341,53 +350,54 @@ def get_LesionWiseResults(pred_file, gt_file, challenge_name, output=None):
         metric_df['_len'] = metric_df['predicted_lesion_numbers'].map(len)
 
         ## Removing <= 50 lesions from analysis
-        fn_sub = (metric_df[(metric_df['_len'] == 0) &
-                  (metric_df['gt_lesion_vol'] <= lesion_volume_thresh)
-                  ]).shape[0]
+        # fn_sub = (metric_df[(metric_df['_len'] == 0) &
+        #           (metric_df['gt_lesion_vol'] <= lesion_volume_thresh)
+        #           ]).shape[0]
         
         
-        gt_tp_sub = (metric_df[(metric_df['_len'] != 0) & 
-            (metric_df['gt_lesion_vol'] <= lesion_volume_thresh)
-            ]).shape[0]
+        # gt_tp_sub = (metric_df[(metric_df['_len'] != 0) & 
+        #     (metric_df['gt_lesion_vol'] <= lesion_volume_thresh)
+        #     ]).shape[0]
         
         
         metric_df['Label'] = [label_values[l]]*len(metric_df)
-        metric_df = metric_df.replace(np.inf, 374)
+        # metric_df = metric_df.replace(np.inf, 374)
 
-        final_lesionwise_metrics_df = final_lesionwise_metrics_df.append(metric_df)
-        metric_df_thresh = metric_df[metric_df['gt_lesion_vol'] > lesion_volume_thresh]
-        
+        final_lesionwise_metrics_df = final_lesionwise_metrics_df._append(metric_df)
+        # metric_df_thresh = metric_df[metric_df['gt_lesion_vol'] > lesion_volume_thresh]
+        metric_df_thresh = metric_df
+
         try:
             lesion_wise_dice = np.sum(metric_df_thresh['dice_lesionwise'])/(len(metric_df_thresh) + len(fp))
         except:
             lesion_wise_dice = np.nan
             
-        try:
-            lesion_wise_hd95 = (np.sum(metric_df_thresh['hd95_lesionwise']) + len(fp)*374)/(len(metric_df_thresh) + len(fp))
-        except:
-            lesion_wise_hd95 = np.nan
+        # try:
+        #     lesion_wise_hd95 = (np.sum(metric_df_thresh['hd95_lesionwise']) + len(fp)*374)/(len(metric_df_thresh) + len(fp))
+        # except:
+        #     lesion_wise_hd95 = np.nan
 
         if math.isnan(lesion_wise_dice):
             lesion_wise_dice = 1
 
-        if math.isnan(lesion_wise_hd95):
-            lesion_wise_hd95 = 0
+        # if math.isnan(lesion_wise_hd95):
+        #     lesion_wise_hd95 = 0
         
-        metrics_dict = {
-            'Num_TP' : len(gt_tp) - gt_tp_sub, # GT_TP
+        # metrics_dict = {
+            # 'Num_TP' : len(gt_tp) - gt_tp_sub, # GT_TP
             #'Num_TP' : len(tp),
-            'Num_FP' : len(fp),
-            'Num_FN' : len(fn) - fn_sub,
-            'Sensitivity': full_sens,
-            'Specificity': full_specs,
-            'Legacy_Dice' : full_dice,
-            'Legacy_HD95' : full_hd95,
-            'GT_Complete_Volume' : full_gt_vol,
-            'LesionWise_Score_Dice' : lesion_wise_dice,
-            'LesionWise_Score_HD95' : lesion_wise_hd95
-        }
+            # 'Num_FP' : len(fp),
+            # 'Num_FN' : len(fn) - fn_sub,
+            # 'Sensitivity': full_sens,
+            # 'Specificity': full_specs,
+            # 'Legacy_Dice' : full_dice,
+            # 'Legacy_HD95' : full_hd95,
+            # 'GT_Complete_Volume' : full_gt_vol,
+            # 'LesionWise_Score_Dice' : lesion_wise_dice,
+            # 'LesionWise_Score_HD95' : lesion_wise_hd95
+        # }
 
-        final_metrics_dict[label_values[l]] = metrics_dict
+        # final_metrics_dict[label_values[l]] = metrics_dict
 
 
     #final_lesionwise_metrics_df.to_csv(os.path.split(pred_file)[0] + '/' +
@@ -396,13 +406,14 @@ def get_LesionWiseResults(pred_file, gt_file, challenge_name, output=None):
     #                                   index=False)
     
     
-    results_df = pd.DataFrame(final_metrics_dict).T
-    results_df['Labels'] = results_df.index
-    results_df = results_df.reset_index(drop=True)
-    results_df.insert(0, 'Labels', results_df.pop('Labels'))
-    results_df.replace(np.inf, 374, inplace=True)
+    # results_df = pd.DataFrame(final_metrics_dict).T
+    # results_df['Labels'] = results_df.index
+    # results_df = results_df.reset_index(drop=True)
+    # results_df.insert(0, 'Labels', results_df.pop('Labels'))
+    # results_df.replace(np.inf, 374, inplace=True)
     
-    if output:
-        results_df.to_csv(output, index=False)
+    # if output:
+    #     results_df.to_csv(output, index=False)
     
-    return results_df
+    print('Miccai Dice:', lesion_wise_dice)
+    # return results_df
